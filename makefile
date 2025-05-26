@@ -13,6 +13,7 @@ player.o: player.c player.h deck.h
 game.o: game.c game.h player.h deck.h
 evaluate.o: evaluate.c evaluate.h player.h game.h
 betting.o: betting.c betting.h game.h player.h
+ranking.o: ranking.c ranking.h player.h
 
 clean:
 	rm -f *.o poker

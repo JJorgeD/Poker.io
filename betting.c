@@ -49,3 +49,12 @@ void bot_turn(Player *bot, Game *game, int *current_bet) {
         printf("%s (bot) pagou %d.\n", bot->name, to_call);
     }
 }
+
+void betting_round(PlayerNode *start, Game *game, int *current_bet) {
+    PlayerNode *p = start;
+    do {
+        player_turn(p->player, game, current_bet);
+        bot_turn(p->player, game, current_bet);
+        p = p->next;
+    } while (p != start);
+}

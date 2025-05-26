@@ -16,5 +16,9 @@ typedef struct {
 void init_game(Game *game, Player *players, int num_players);
 void deal_community_cards(Game *game, Card *deck, int *deck_pos);
 void print_community_cards(Game *game, int num_cards);
+void deal_flop(Game *game, Card *deck, int *deck_pos);
+void deal_turn(Game *game, Card *deck, int *deck_pos);
+void deal_river(Game *game, Card *deck, int *deck_pos);
+
 
 #endif

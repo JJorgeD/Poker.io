@@ -13,6 +13,20 @@ typedef struct {
     int is_folded; // 0 = jogando, 1 = desistiu
 } Player;
 
+#ifndef PLAYER_LIST_H
+#define PLAYER_LIST_H
+
+#include "player.h"
+typedef struct PlayerNode {
+    Player *player;
+    struct PlayerNode *next;
+} PlayerNode;
+
+PlayerNode* build_circle(Player players[], int n);
+int quantos_com_chips(PlayerNode *dealer);
+
+#endif
+
 void init_player(Player *player, const char *name, int chips);
 void deal_to_player(Player *player, Card *deck, int *deck_pos);
 void print_player_hand(Player *player);

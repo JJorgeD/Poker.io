@@ -5,5 +5,6 @@
 
 void player_turn(Player *player, Game *game, int *current_bet);
 void bot_turn(Player *bot, Game *game, int *current_bet);
+void betting_round(PlayerNode *start, Game *game, int *current_bet);
 
 #endif

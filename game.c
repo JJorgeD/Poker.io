@@ -22,6 +22,18 @@ void deal_community_cards(Game *game, Card *deck, int *deck_pos) {
     game->community[4] = deck[(*deck_pos)++];
 }
 
+void deal_flop(Game *game, Card *deck, int *deck_pos) {
+    for (int i = 0; i < 3; ++i)
+        game->community[i] = deck[(*deck_pos)++];
+}
+void deal_turn(Game *game, Card *deck, int *deck_pos) {
+    game->community[3] = deck[(*deck_pos)++];
+}
+void deal_river(Game *game, Card *deck, int *deck_pos) {
+    game->community[4] = deck[(*deck_pos)++];
+}
+
+
 void print_community_cards(Game *game, int num_cards) {
     printf("Cartas da mesa: ");
     for (int i = 0; i < num_cards; ++i) {

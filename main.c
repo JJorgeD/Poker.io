@@ -1,85 +1,128 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
 #include "deck.h"
 #include "player.h"
 #include "game.h"
 #include "evaluate.h"
 #include "betting.h"
-#include "ia_api.h" // se estiver usando a simulação de IA
+#include "ranking.h"
+
+#define NUM_PLAYERS 2
+#define START_CHIPS 1000
+#define INITIAL_BET 50
 
 int main() {
-    // Cria e embaralha o baralho
     Card deck[NUM_CARDS];
-    init_deck(deck);
-    shuffle_deck(deck);
-
-    // Cria dois jogadores: você e o bot
-    Player players[2];
-    init_player(&players[0], "Você", 1000);
-    init_player(&players[1], "Bot", 1000);
-
-    // Posição atual no baralho (controle da distribuição)
-    int deck_pos = 0;
-
-    // Distribui 2 cartas da mão para cada jogador
-    for (int i = 0; i < 2; ++i) {
-        deal_to_player(&players[i], deck, &deck_pos);
-        print_player_hand(&players[i]);
-    }
-
-    // Cria a estrutura do jogo e associa os jogadores
+    Player players[NUM_PLAYERS];
+    PlayerNode *dealer;
     Game game;
-    init_game(&game, players, 2);
-    deal_community_cards(&game, deck, &deck_pos); // flop + turn + river
+    int deck_pos;
 
-    // Inicia uma rodada de apostas (pré-flop)
-    int current_bet = 50; // aposta inicial
-    printf("\n💰 Rodada de apostas (pré-flop)\n");
-    player_turn(&players[0], &game, &current_bet); // Jogador humano
-    bot_turn(&players[1], &game, &current_bet);    // Bot IA ou simulado
+    srand((unsigned)time(NULL));
 
-    // Mostra o flop
-    printf("\n🃏 Flop:\n");
-    print_community_cards(&game, 3);
+    init_player(&players[0], "Você", START_CHIPS);
+    init_player(&players[1], "Bot", START_CHIPS);
 
-    // Mostra o turn
-    printf("\n🃏 Turn:\n");
-    print_community_cards(&game, 4);
+    dealer = build_circle(players, NUM_PLAYERS);
+    init_game(&game, players, NUM_PLAYERS);
 
-    // Mostra o river
-    printf("\n🃏 River:\n");
-    print_community_cards(&game, 5);
+    while (quantos_com_chips(dealer) > 1) {
 
-    // Avalia quem venceu a rodada
-    printf("\n🏁 Determinando o vencedor...\n");
-    printf("\n💵 Pot final: %d fichas\n", game.pot);
+        deck_pos = 0;
+        init_deck(deck);
+        shuffle_deck(deck);
+        game.pot = 0;
 
-    // Verifica se alguém desistiu (fold)
-    if (players[0].is_folded && !players[1].is_folded) {
-        printf("🏆 %s venceu porque %s desistiu!\n", players[1].name, players[0].name);
-        players[1].chips += game.pot;
-    } else if (players[1].is_folded && !players[0].is_folded) {
-        printf("🏆 %s venceu porque %s desistiu!\n", players[0].name, players[1].name);
-        players[0].chips += game.pot;
-    } else {
-        // Compara as mãos e determina o vencedor
-        int result = compare_hands(&players[0], &players[1], &game);
-        if (result == 1) {
-            printf("🏆 %s venceu!\n", players[0].name);
-            players[0].chips += game.pot;
-        } else if (result == 2) {
-            printf("🏆 %s venceu!\n", players[1].name);
-            players[1].chips += game.pot;
+
+        PlayerNode *p = dealer->next;
+        do {
+            p->player->is_folded = 0;
+            p = p->next;
+        } while (p != dealer->next);
+
+
+        p = dealer->next;
+        do {
+            deal_to_player(p->player, deck, &deck_pos);
+            print_player_hand(p->player);
+            p = p->next;
+        } while (p != dealer->next);
+
+
+        int current_bet = INITIAL_BET;
+        printf("\n💰 Rodada de apostas (pré-flop)\n");
+        betting_round(dealer->next, &game, &current_bet);
+
+
+        deal_flop(&game, deck, &deck_pos);
+        printf("\n🃏 Flop:\n");
+        print_community_cards(&game, 3);
+        current_bet = 0;
+        betting_round(dealer->next, &game, &current_bet);
+
+
+        deal_turn(&game, deck, &deck_pos);
+        printf("\n🃏 Turn:\n");
+        print_community_cards(&game, 4);
+        current_bet = 0;
+        betting_round(dealer->next, &game, &current_bet);
+
+
+        deal_river(&game, deck, &deck_pos);
+        printf("\n🃏 River:\n");
+        print_community_cards(&game, 5);
+        current_bet = 0;
+        betting_round(dealer->next, &game, &current_bet);
+
+
+        printf("\n🏁 Showdown\n");
+        PlayerNode *winner = NULL;
+
+        int active_count = 0;
+        p = dealer->next;
+        do {
+            if (!p->player->is_folded) {
+                if (winner == NULL) winner = p;
+                active_count++;
+            }
+            p = p->next;
+        } while (p != dealer->next);
+
+        if (active_count == 1) {
+            printf("🏆 %s venceu porque o oponente desistiu!\n",
+                   winner->player->name);
         } else {
-            printf("🤝 Empate! Pot dividido.\n");
-            players[0].chips += game.pot / 2;
-            players[1].chips += game.pot / 2;
+
+
+            p = dealer->next;
+            do {
+                if (!p->player->is_folded && p != winner) {
+                    int res = compare_hands(p->player, winner->player, &game);
+                    if (res == 1) winner = p;
+                }
+                p = p->next;
+            } while (p != dealer->next);
+            printf("🏆 Vencedor: %s com a melhor mão!\n", winner->player->name);
         }
+
+        printf("💰 Pote final: %d fichas\n\n", game.pot);
+        winner->player->chips += game.pot;
+
+
+        save_ranking(players, NUM_PLAYERS);
+
+
+        printf("💳 Fichas restantes:\n");
+        for (int i = 0; i < NUM_PLAYERS; ++i) {
+            printf("  %s: %d\n", players[i].name, players[i].chips);
+        }
+        printf("\n---------------------------------------\n\n");
+
+
+        dealer = dealer->next;
     }
 
-    // Mostra fichas restantes
-    printf("\n💳 Fichas restantes:\n");
-    printf("%s: %d fichas\n", players[0].name, players[0].chips);
-    printf("%s: %d fichas\n", players[1].name, players[1].chips);
-
+    printf("🎉 Fim do jogo! Obrigado por jogar.\n");
     return 0;
 }
