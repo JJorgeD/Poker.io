@@ -1,6 +1,8 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -std=c99
 OBJS = main.o deck.o player.o game.o evaluate.o betting.o
+LDLIBS = -lcurl
+
 
 poker: $(OBJS)
 	$(CC) $(CFLAGS) -o poker $(OBJS)
@@ -14,3 +16,4 @@ betting.o: betting.c betting.h game.h player.h
 
 clean:
 	rm -f *.o poker
+
